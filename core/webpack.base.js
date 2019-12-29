@@ -1,11 +1,12 @@
 const path = require('path')
 const webpack = require('webpack')
-const ChromeReloadPlugin = require('wcer')
 const { htmlPage } = require('./tools')
 const CopyWebpackPlugin = require('copy-webpack-plugin')
 // const { CleanWebpackPlugin } = require('clean-webpack-plugin')
 const VueLoaderPlugin = require('vue-loader/lib/plugin')
 const GenerateLocaleJsonPlugin = require('../plugins/GenerateLocaleJsonPlugin')
+const baseManifest = require('./manifest.js')
+const WebpackExtensionManifestPlugin = require('webpack-extension-manifest-plugin')
 
 const rootDir = path.resolve(__dirname, '..')
 
@@ -132,9 +133,10 @@ module.exports = (env) => {
       htmlPage('options', 'options', ['vendors~options~tab', 'vendors~options', 'options']),
       htmlPage('background', 'background', ['vendors~background~tab', 'background']),
       new CopyWebpackPlugin([{ from: path.join(rootDir, 'static') }]),
-      new ChromeReloadPlugin({
-        port: (!env.FIREFOX) ? 9090 : 9091,
-        manifest: path.join(rootDir, 'src', 'manifest.js')
+      new WebpackExtensionManifestPlugin({
+        config: {
+          base: baseManifest
+        }
       }),
       new GenerateLocaleJsonPlugin({
         _locales: path.join(rootDir, 'src', '_locales')

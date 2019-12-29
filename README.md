@@ -69,7 +69,7 @@ Welcome every language support. Help your countryman to use this application. Re
 yarn # install dependencies
 # Chrome
 npm run dev # for development
-npm run build-chrome # for production
+npm run build # for production
 # Firefox
 npm run dev-firefox # for development
 npm run build-firefox # for production

@@ -39,7 +39,7 @@ import zhLocale from 'element-ui/lib/locale/lang/zh-TW'
 // Libs
 import locale from 'element-ui/lib/locale'
 import _get from 'lodash/get'
-import Root from './Root.vue'
+import Root from './root.vue'
 import router from './router'
 import fetchThreads from './lib/fetchThreads.js'
 import { getJar } from './lib/util.js'

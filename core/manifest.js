@@ -58,8 +58,7 @@ if (!process.env.FIREFOX) {
         'https://www.googleapis.com/auth/chromewebstore',
         'https://www.googleapis.com/auth/chromewebstore.readonly'
       ]
-    },
-    key: config[stage].key
+    }
   })
 } else {
   delete manifest.background.persistent // Firefox not support background.persistent

@@ -68,7 +68,7 @@ Firefox
 yarn # 安裝相依套件
 # Chrome
 npm run dev # 開發
-npm run build-chrome # 生產
+npm run build # 生產
 # Firefox
 npm run dev-firefox # 開發
 npm run build-firefox # 生產

@@ -218,10 +218,11 @@ function formatEventData (event) {
     case 'LightweightEventUpdateTimeExtensibleMessageAdminText':
     case 'LightweightEventUpdateLocationExtensibleMessageAdminText':
     case 'LightweightEventDeleteExtensibleMessageAdminText':
+    case 'LightweightEventRSVPExtensibleMessageAdminText':
       return {}
     default:
       console.log(event)
-      return console.error('Don\'t know what to with event data type ' + event.__typename)
+      return console.error('Don\'t know what to do with event data type ' + event.__typename)
   }
 }
 
