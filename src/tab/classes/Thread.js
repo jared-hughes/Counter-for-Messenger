@@ -26,6 +26,7 @@ export default class Thread {
     if (!messages) throw new Error('Need messages.')
 
     let characterSum = 0
+    const messageTimes = {}
     // Statistic messages with every participants. And count character.
     const participantsStats = {}
     messages.forEach((message) => {
@@ -36,8 +37,11 @@ export default class Thread {
         _get(participantStats, 'messageCount', 0) + 1)
       _set(participantsStats, `${message.senderID}.characterCount`,
         _get(participantStats, 'characterCount', 0) + textLength)
+      messageTimes[message.senderID] = messageTimes[message.senderID] || []
+      messageTimes[message.senderID].push(Number(message.timestamp))
     })
     this.characterCount = characterSum
+    this.messageTimes = messageTimes
 
     // Set statistic results on Thread Object.
     // Don't let vue instance trigger "messages". Will cause memory leak.
@@ -68,6 +72,14 @@ export default class Thread {
   static culCharacterCount (messages) {
     return messages.reduce((cur, message) =>
       ((message.body) ? message.body.length : 0) + cur, 0)
+  }
+
+  static culMessageTimes (messages) {
+    let messageTimes = {}
+    messages.forEach(({ timestamp, senderID }) => {
+      messageTimes = messageTimes || []
+      messageTimes.push(Number(timestamp))
+    })
   }
 
   async reload (jar) {
@@ -101,7 +113,8 @@ export default class Thread {
         jar: ctx.jar, thread: this, $set: $set, messageLimit
       })
       this.messages = (_get(cachedThread, 'messages') || []).concat(result)
-      this.characterCount = Thread.culCharacterCount(this.messages)
+      // this.characterCount = Thread.culCharacterCount(this.messages)
+      this.messageTimes = Thread.culMessageTimes(this.messages)
       this.analyzeMessages()
       ctx.db.put({ id: this.id, messages: this.messages })
       this.needUpdate = false

@@ -1,4 +1,4 @@
-<template functional>
+<template>
   <div class="event-outer">
     <span class="event-snippet">
       {{ messageData.snippet }}

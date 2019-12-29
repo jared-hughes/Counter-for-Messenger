@@ -38,41 +38,55 @@
         Generate Image
       </el-menu-item>
     </el-menu>
-    <bar-chart
-      ref="barChart"
-      :chart-data="chartData"
-      :styles="chartContainerStyles"
-      :height="chartHeight"
-      :options="barOption">
-    </bar-chart>
-    <sharing-dialog ref="sharingDialog" :jar="ctx.jar" />
-    <el-aside width="50px">
-      <el-tooltip class="item" effect="dark" :content="__('drapToLookOtherUsers')" placement="left">
-        <el-slider
-          v-model="rank"
-          vertical
-          :height="chartHeight - 18 + 'px'"
-          :min="1"
-          :max="this.threads.length"
-          @change="renderChart()">
-        </el-slider>
-      </el-tooltip>
-    </el-aside>
+    <template v-if="isBar">
+      <bar-chart
+        ref="barChart"
+        :chart-data="chartData"
+        :styles="chartContainerStyles"
+        :height="chartHeight"
+        :options="barOption">
+      </bar-chart>
+      <sharing-dialog ref="sharingDialog" :jar="ctx.jar" />
+      <el-aside width="50px">
+        <el-tooltip class="item" effect="dark" :content="__('drapToLookOtherUsers')" placement="left">
+          <el-slider
+            v-model="rank"
+            vertical
+            :height="chartHeight - 18 + "px""
+            :min="1"
+            :max="this.threads.length"
+            @change="renderChart()">
+          </el-slider>
+        </el-tooltip>
+      </el-aside>
+    </template>
+    <template v-else>
+      <line-chart
+        ref="lineChart"
+        :chart-data="lineChartData"
+        :styles="chartContainerStyles"
+        :height="chartHeight"
+        :options="lineOption">
+      </line-chart>
+    </template>
   </el-container>
 </template>
 <script>
 import { Message } from 'element-ui'
 import ColorHash from 'color-hash'
 import BarChart from './BarChart.js'
+import LineChart from './LineChart.js'
 import SharingDialog from './SharingDialog.vue'
 import fetchThreadDetail from '../lib/fetchThreadDetail.js'
 const __ = chrome.i18n.getMessage
 const colorHash = new ColorHash({ lightness: [0.35, 0.5, 0.65] })
+const colorHashFG = new ColorHash({ lightness: 0.4 })
+const colorHashBG = new ColorHash({ lightness: 0.8 })
 
 export default {
   name: 'ChartPage',
 
-  components: { BarChart, SharingDialog },
+  components: { LineChart, BarChart, SharingDialog },
 
   props: ['ctx'],
 
@@ -87,9 +101,12 @@ export default {
         height: document.documentElement.clientHeight - 130 + 'px'
       },
       isCollapse: false,
+      isBar: true,
       loading: null,
       loadingCount: 0,
       chartData: null,
+      thread: null,
+      lineChartData: null,
       threads,
       rank: threads.length,
       sliderMax: 1,
@@ -111,6 +128,18 @@ export default {
         scales: {
           xAxes: [{ stacked: true }],
           yAxes: [{ stacked: true, barPercentage: 0.7 }]
+        },
+        onClick: this.onClickBar.bind(this)
+      },
+      lineOption: {
+        responsive: true,
+        scales: {
+          yAxes: [{
+            stacked: true
+          }]
+        },
+        animation: {
+          duration: 750
         }
       }
     }
@@ -141,6 +170,17 @@ export default {
   computed: { amountOfMaxDisplay () { return this.chartHeight / 20 } },
 
   methods: {
+    onClickBar (evt, array) {
+      // https://stackoverflow.com/a/54080553/7481517
+      if (array.length !== 0) {
+        // did not select background
+        var position = array[0]._index
+        // found the thread clicked
+        this.thread = this.splicedThreads[position]
+        this.isBar = false
+        this.renderChart()
+      }
+    },
     changeChartTitle () {
       const specs = [
         (this.isShowDetail) ? __('detail') : __('total'),
@@ -155,12 +195,85 @@ export default {
     generateSharingDialog () {
       this.$ga.event('SharingImage', 'generate')
 
-      this.$refs.sharingDialog.canvas = this.$refs.barChart.canvas
+      this.$refs.sharingDialog.canvas = this.isBar ? this.$refs.barChart.canvas : this.$refs.lineChart.canvas
       this.$refs.sharingDialog.show()
     },
     async renderChart () {
+      if (this.isBar) {
+        await this.renderBarChart()
+      } else {
+        await this.renderLineChart()
+      }
+    },
+    async renderLineChart () {
+      // // bucket quarterly
+      const resolution = 86400 * 1000 * 365.2475 / 4
+      /*
+      thread {
+        1234:
+      }
+      */
+      const datasets = {}
+      let bucketStarts = []
+      let spanEnd = null
+      let spanStart = null
+      const times = this.thread.messageTimes
+      for (const { user } of this.thread.participants) {
+        const last = times[user.id][times[user.id].length - 1]
+        if (!spanEnd || last > spanEnd) {
+          spanEnd = last
+        }
+        const first = times[user.id][0]
+        if (!spanStart || first < spanStart) {
+          spanStart = first
+        }
+      }
+      console.error('datasets', datasets)
+      for (const { user } of this.thread.participants) {
+        const isFirst = bucketStarts.length === 0
+        datasets[user.id] = []
+        let current = spanStart
+        let i = 0
+        while (current < spanEnd) {
+          if (isFirst) {
+            bucketStarts.push(current)
+          }
+          const start = i
+          current += resolution
+          while (i < times[user.id].length && times[user.id][i] < current) {
+            i++
+          }
+          // + 1 to count inclusive, e.g. 3 to 6 is 6-3+1=4 numbers inclusive
+          datasets[user.id].push(i - start + 1)
+        }
+        if (isFirst) {
+          bucketStarts.push(current)
+        }
+      }
+      bucketStarts = bucketStarts.map(t => new Date(t).toLocaleDateString())
+      this.lineChartData = {
+        labels: bucketStarts,
+        datasets: this.thread.participants.map(({ user }) => {
+          const bgColor = colorHashBG.hex(user.id, { lightness: 0.8 })
+          const fgColor = colorHashFG.hex(user.id, { lightness: 0.4 })
+          console.log('user')
+          console.log('data', datasets[user.id])
+          return {
+            label: user.name,
+            fill: true,
+            backgroundColor: bgColor,
+            borderColor: fgColor,
+            pointHighlightStroke: fgColor,
+            borderCapStyle: fgColor,
+            data: datasets[user.id]
+          }
+        })
+      }
+    },
+    async renderBarChart () {
       const startSliceIndex = this.threads.length - Number(this.rank)
       const splicedThreads = this.threads.slice(startSliceIndex, startSliceIndex + this.amountOfMaxDisplay)
+      this.splicedThreads = splicedThreads
       if (!(!this.isShowCharacter && !this.isShowDetail)) {
         await this.syncThreadDetail(splicedThreads)
       }

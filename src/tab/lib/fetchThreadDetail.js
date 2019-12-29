@@ -219,6 +219,7 @@ function formatEventData (event) {
     case 'LightweightEventUpdateLocationExtensibleMessageAdminText':
     case 'LightweightEventDeleteExtensibleMessageAdminText':
     case 'LightweightEventRSVPExtensibleMessageAdminText':
+    case 'MessengerCallLogExtensibleMessageAdminText':
       return {}
     default:
       console.log(event)
