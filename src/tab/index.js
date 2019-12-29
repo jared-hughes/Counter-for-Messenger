@@ -146,7 +146,7 @@ new Vue({
   async created () {
     this.loading = this.$loading({
       lock: true,
-      text: this.__('interceptingToken'),
+      text: __('interceptingToken'),
       spinner: 'el-icon-loading',
       background: 'rgba(0, 0, 0, 0.7)'
     })

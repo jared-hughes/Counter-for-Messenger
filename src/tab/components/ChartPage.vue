@@ -1,4 +1,4 @@
-<template functional>
+<template>
   <el-container>
     <el-menu
       default-active=""
